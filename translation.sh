@@ -28,8 +28,8 @@ fi
 ###############################################################################
 
 declare -A SYS_MAP_RARS=(
-	["SYS_printInt"]=1
-	["SYS_readInt"]=5
+  ["SYS_printInt"]=1
+  ["SYS_readInt"]=5
   ["SYS_printChar"]=11
   ["SYS_readChar"]=12
   ["SYS_printStr"]=4
@@ -67,18 +67,11 @@ q2r() {
 
   echo "Converting QEMU format to RARS format..."
 
-  # Step 1: Copy the contents of srcFile to resFile
   cp "$srcFile" "$resFile"
 
-  # Step 2: Apply transformations to resFile:
-  #  - Remove leading whitespace for lines starting with '.' (except `.equ` lines)
-  #  - Delete lines starting with `.equ`
   sed -i -e 's/^[[:space:]]*\(\.\)/\1/' -e '/^[[:space:]]*\.equ/d' "$resFile"
-
   sed -i '/\.section .text/ s/\.section .text/\.section\n.text/' "$resFile"
 
-
-  # Step 3: Replace system calls with corresponding numbers from SYS_MAP_RARS
   for key in "${!SYS_MAP_RARS[@]}"; do
 	sed -i "s/${key}/${SYS_MAP_RARS[$key]}/g" "$resFile"
   done
@@ -88,27 +81,20 @@ q2r() {
 
 
 # rars to qemu
-# rars to qemu
 r2q() {
   local srcFile=$1
   local resFile=$2
 
   echo "Converting RARS format to QEMU format..."
 
-  # Step 1: Copy the contents of srcFile to resFile
   cp "$srcFile" "$resFile"
 
-  # Step 2: Insert the .equ directives at the top of the file
   sed -i '1s/^/.equ SYS_printInt, 244\n.equ SYS_readInt, 245\n.equ SYS_printChar, 246\n.equ SYS_readChar, 247\n.equ SYS_printStr, 248\n.equ SYS_readStr, 249\n.equ SYS_printFloat, 250\n.equ SYS_readFloat, 251\n.equ SYS_exit, 93\n/' "$resFile"
-
-  # Step 3: Merge `.section` and `.text` into one line
-  # This looks for `.section` followed by `.text` and merges them into `.section .text`
   sed -i '/\.section/ {
     N
     s/\.section\n\.text/\.section .text/
   }' "$resFile"
 
-  # Step 4: Replace `li a7, <number>` with `li a7, <syscall_name>` from SYS_MAP_QEMU
   for key in "${!SYS_MAP_QEMU[@]}"; do
     sed -i "s/li a7, $key/li a7, ${SYS_MAP_QEMU[$key]}/g" "$resFile"
   done
